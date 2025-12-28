@@ -1,4 +1,4 @@
-import mysql2 from 'mysql2/promise';
+import mysql2, { ResultSetHeader } from 'mysql2/promise';
 import dotenv from 'dotenv';
 import GenericEntity from '../entity/generic-entity';
 
@@ -44,7 +44,7 @@ export class Persistence {
         const insertCount = '(' + values.map(() => '?') + ')';
 
         const query = 'INSERT INTO ' + className + inserts + ' VALUES ' + insertCount;
-        return await pool.execute(query, values);
+        return await pool.execute<ResultSetHeader>(query, values);
     }
 
     static async persistEntities<T extends GenericEntity>(className: string, entities: Array<Partial<T>>): Promise<any> {
