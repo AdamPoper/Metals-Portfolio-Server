@@ -1,7 +1,8 @@
+import { Request, Response } from 'express';
 import { Persistence } from "../persistence/persistence";
 import Position, { POSITION_TABLE_NAME } from "../entity/position";
 
-const addPosition = async (req: any, res: any) => {
+const addPosition = async (req: Request, res: Response) => {
     const position: Position = req.body;
     try {
         const [result] = await Persistence.persistEntity<Position>(POSITION_TABLE_NAME, position);
@@ -12,7 +13,7 @@ const addPosition = async (req: any, res: any) => {
     }
 };
 
-const getAllPositions = async (req: any, res: any) => {
+const getAllPositions = async (req: Request, res: Response) => {
     try {
         const positions = await Persistence.selectEntitiesByNamedQuery<Position>(`SELECT * FROM ${POSITION_TABLE_NAME}`);
         res.status(200).json(positions);
