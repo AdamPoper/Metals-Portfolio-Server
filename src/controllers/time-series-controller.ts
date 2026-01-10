@@ -14,6 +14,20 @@ const getAllTimeSeriesData = async (req: Request, res: Response) => {
 const addSnapshotToTimeSeries = async (req: Request, res: Response) => {
     const snapshot: Snapshot = req.body;
     try {
+        const existingSnapshot = await Persistence.selectEntityByNamedQuery<Snapshot>(SnapshotQueries.QUERY_BY_SINGLE_DATE, [snapshot.snap_date]);
+        existingSnapshot.value = snapshot.value;
+        if (existingSnapshot) {
+            await Persistence.updateEntity<Snapshot>(SNAPSHOT_TABLE_NAME, existingSnapshot);
+            res.status(200).send('Snapshot for this date already exists and has been updated');
+            return;
+        }
+    } catch (error) {
+        console.error('Error checking for existing snapshot:', error);
+        res.status(500).send('Error checking for existing snapshot');
+        return;
+    }
+
+    try {
         const [result] = await Persistence.persistEntity<Snapshot>(SNAPSHOT_TABLE_NAME, snapshot);
         const newSnapshot = await Persistence.selectEntityById<Snapshot>(SNAPSHOT_TABLE_NAME, (result as any).insertId);
         res.status(200).json(newSnapshot);
