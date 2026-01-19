@@ -1,12 +1,14 @@
 import { Request, Response } from 'express';
 import { Persistence } from "../persistence/persistence";
 import Position, { POSITION_TABLE_NAME } from "../entity/position";
+import { TimeSeriesService } from '../services/time-series.service';
 
 const addPosition = async (req: Request, res: Response) => {
     const position: Position = req.body;
     try {
         const [result] = await Persistence.persistEntity<Position>(POSITION_TABLE_NAME, position);
         const newPosition = await Persistence.selectEntityById<Position>(POSITION_TABLE_NAME, (result as any).insertId);
+        TimeSeriesService.updateTimeSeries();
         res.status(200).json(newPosition);
     } catch (error) {
         res.status(500).send(error.message);

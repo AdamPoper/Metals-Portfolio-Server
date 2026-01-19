@@ -1,8 +1,5 @@
 import mysql2, { ResultSetHeader } from 'mysql2/promise';
-import dotenv from 'dotenv';
 import GenericEntity from '../entity/generic-entity';
-
-dotenv.config();
 
 export const pool = mysql2.createPool({
     host: 'localhost',
