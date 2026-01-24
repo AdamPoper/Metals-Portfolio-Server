@@ -8,18 +8,32 @@ export class TimeSeriesService {
 
     static timeoutHandle: NodeJS.Timeout;
 
+    static isWithinTradingWindow(): boolean {
+        const now = new Date();
+        const easternTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+        const dayOfWeek = easternTime.getDay(); // 0 = Sunday, 5 = Friday, 6 = Saturday
+        const hour = easternTime.getHours();
+
+        // Sunday (0) at 18:00 or later, OR Monday-Thursday (1-4) any time, OR Friday (5) before 17:00
+        return (dayOfWeek === 0 && hour >= 18) || 
+               (dayOfWeek >= 1 && dayOfWeek <= 4) || 
+               (dayOfWeek === 5 && hour < 17);
+    }
+
     static async startTimeSeriesUpdateJob(): Promise<void> {
         const run = async () => {
             try {
-                await this.updateTimeSeries();
+                if (this.isWithinTradingWindow()) {
+                    await this.updateTimeSeries();
+                }
             } catch (error) {
                 console.error('Error updating time series:', error);
-            } finally {
-                const interval = 1000 * 60 * 60; // 1 hour
-                this.timeoutHandle = setTimeout(run, interval);
             }
         };
+
         run();
+        const interval = 1000 * 60 * 60; // 1 hour
+        this.timeoutHandle = setTimeout(run, interval);
     }
 
     static killTimeSeriesUpdateJob(): void {
