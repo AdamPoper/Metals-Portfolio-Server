@@ -19,12 +19,13 @@ export class TimeSeriesService {
                 }
             } catch (error) {
                 console.error('Error updating time series:', error);
+            } finally {
+                const interval = 1000 * 60 * 60; // 1 hour
+                this.timeoutHandle = setTimeout(runTimeSeriesUpdate, interval);
             }
         };
 
         runTimeSeriesUpdate();
-        const interval = 1000 * 60 * 60; // 1 hour
-        this.timeoutHandle = setTimeout(runTimeSeriesUpdate, interval);
     }
 
     static killTimeSeriesUpdateJob(): void {
@@ -35,6 +36,7 @@ export class TimeSeriesService {
 
     static async updateTimeSeries(): Promise<void> {
         const {gold, silver} = await PricesService.fetchSpotPrices();
+        console.log(`Updating time series with Gold: ${gold}, Silver: ${silver}`);
         const positions = await Persistence.selectEntitiesByNamedQuery<Position>(PositionQueries.QUERY_ALL);
         const totalValue = positions.reduce((sum, position) => {
             const price = position.type === PositionTypes.GOLD ? gold : silver;
