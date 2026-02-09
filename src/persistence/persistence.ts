@@ -2,10 +2,10 @@ import mysql2, { ResultSetHeader } from 'mysql2/promise';
 import GenericEntity from '../entity/generic-entity';
 
 export const pool = mysql2.createPool({
-    host: 'localhost',
-    user: process.env.DB_USERNAME,
-    password: process.env.DB_PASSWORD,
-    database: 'metal-portfolio'
+    host: process.env.METALS_PORTFOLIO_DB_HOST || 'localhost',
+    user: process.env.METALS_PORTFOLIO_DB_USERNAME,
+    password: process.env.METALS_PORTFOLIO_DB_PASSWORD,
+    database: process.env.METALS_PORTFOLIO_DB_NAME,
 });
 
 export class Persistence {
