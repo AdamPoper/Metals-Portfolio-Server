@@ -20,7 +20,7 @@ export class TimeSeriesService {
             } catch (error) {
                 console.error('Error updating time series:', error);
             } finally {
-                const interval = 1000 * 60 * 60; // 1 hour
+                const interval = 1000 * 60 * 25; // 25 minutes
                 this.timeoutHandle = setTimeout(runTimeSeriesUpdate, interval);
             }
         };
