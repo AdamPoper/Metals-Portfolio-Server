@@ -6,16 +6,26 @@ export class DateTimeHelper {
 
     static timeoutHandle: NodeJS.Timeout;
 
+    private static formatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'America/New_York',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+    });
+
     static getCurrentEasternDateString(): string {
-        const formatter = new Intl.DateTimeFormat('en-US', {
-            timeZone: 'America/New_York',
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit'
-        });
+        const parts = this.formatter.formatToParts(new Date());
+        const year = parts.find(p => p.type === 'year')!.value;
+        const month = parts.find(p => p.type === 'month')!.value;
+        const day = parts.find(p => p.type === 'day')!.value;
 
-        const parts = formatter.formatToParts(new Date());
+        return `${year}-${month}-${day}`; // YYYY-MM-dd
+    }
 
+    static getEasternDateStringWithOffset(offsetDays: number): string {
+        const millisecondsInDay = 24 * 60 * 60 * 1000;
+        const targetDate = new Date(Date.now() + offsetDays * millisecondsInDay);
+        const parts = this.formatter.formatToParts(targetDate);
         const year = parts.find(p => p.type === 'year')!.value;
         const month = parts.find(p => p.type === 'month')!.value;
         const day = parts.find(p => p.type === 'day')!.value;

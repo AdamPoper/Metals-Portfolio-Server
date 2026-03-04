@@ -17,5 +17,6 @@ export default interface Position extends GenericEntity, RowDataPacket {
 }
 
 export const PositionQueries = {
-    QUERY_ALL: `SELECT * FROM ${POSITION_TABLE_NAME}`
+    QUERY_ALL: `SELECT * FROM ${POSITION_TABLE_NAME}`,
+    QUERY_ALL_NON_ZERO_QUANTITY: `SELECT * FROM ${POSITION_TABLE_NAME} WHERE quantity > 0`,
 }

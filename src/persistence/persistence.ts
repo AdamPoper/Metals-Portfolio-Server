@@ -1,5 +1,9 @@
 import mysql2, { ResultSetHeader } from 'mysql2/promise';
 import GenericEntity from '../entity/generic-entity';
+import { AsyncLocalStorage } from 'async_hooks';
+import { PoolConnection } from 'mysql2/promise';
+
+export const transactionStorage = new AsyncLocalStorage<PoolConnection>();
 
 export const pool = mysql2.createPool({
     host: process.env.METALS_PORTFOLIO_DB_HOST || 'localhost',
@@ -41,7 +45,7 @@ export class Persistence {
         const insertCount = '(' + values.map(() => '?') + ')';
 
         const query = 'INSERT INTO ' + className + inserts + ' VALUES ' + insertCount;
-        return await pool.execute<ResultSetHeader>(query, values);
+        return await this.getExecuter().execute<ResultSetHeader>(query, values);
     }
 
     static async persistEntities<T extends GenericEntity>(className: string, entities: Array<Partial<T>>): Promise<any> {
@@ -65,7 +69,7 @@ export class Persistence {
         }).toString();
 
         const query = 'INSERT INTO ' + className + insertColumns + ' VALUES ' + insertValues;
-        return await pool.execute(query, values);
+        return await this.getExecuter().execute(query, values);
     }
 
     static async updateEntity<T extends GenericEntity>(className: string, entity: Partial<T>): Promise<any> {
@@ -78,7 +82,7 @@ export class Persistence {
         params.push(entityId);
         query += setClauses.join(', ');
         query += ` WHERE id = ?;`;
-        return await pool.execute(query, params);
+        return await this.getExecuter().execute(query, params);
     }
 
     static async deleteEntity<T extends GenericEntity>(className: string, id: number): Promise<T | null> {
@@ -88,7 +92,29 @@ export class Persistence {
         }
 
         const query: string = `DELETE FROM ${className} WHERE id = ?;`;
-        await pool.execute(query, [id]);
+        await this.getExecuter().execute(query, [id]);
         return row;
+    }
+
+    static async transactional<T>(
+        callback: () => Promise<T>
+    ): Promise<T> {
+        const connection = await pool.getConnection();
+        try {
+            await connection.beginTransaction();
+            const result = await transactionStorage.run(connection, callback);
+            await connection.commit();
+            return result;
+        } catch (error) {
+            await connection.rollback();
+            throw error;
+        } finally {
+            connection.release();
+        }
+    }
+
+    private static getExecuter(): PoolConnection | typeof pool {
+        const transactionContext = transactionStorage.getStore();
+        return transactionContext ?? pool;
     }
 }
