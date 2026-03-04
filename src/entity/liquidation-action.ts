@@ -1,6 +1,7 @@
 import { RowDataPacket } from "mysql2";
 import GenericEntity from "./generic-entity";
 
+export const LIQUIDATION_ACTION_TABLE_NAME = 'liquidation_action';
 
 export interface LiquidationAction extends GenericEntity, RowDataPacket {
     id: number;

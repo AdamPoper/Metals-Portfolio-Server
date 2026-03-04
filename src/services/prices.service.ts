@@ -16,7 +16,7 @@ export class PricesService {
         if (process.env.NODE_ENV === 'production') {
             data = await this.callMetalsApi();
         } else {
-            data = await this.getMockSpotPrices();    
+            data = await this.getMockSpotPrices();
         }
         
         const {gold, silver} = data.metals;
@@ -28,7 +28,7 @@ export class PricesService {
         return spotPrices;
     }
 
-    static async persistToDB(spotPrices: ApiSpotPrices): Promise<[any, any]> {
+    static async persistToDB(spotPrices: ApiSpotPrices): Promise<void> {
         const today = DateTimeHelper.getCurrentEasternDateString();
         const currentSnapshots = await Persistence.selectEntitiesByNamedQuery<MetalSnapshot>(MetalSnapshotQueries.QUERY_BY_SINGLE_DATE, [today]);
         const now = Date.now();
@@ -43,10 +43,14 @@ export class PricesService {
                 silverSnap.price = spotPrices.silver;
                 silverSnap.metal_timestamp = now;
             }
-            return Promise.all([
-                Persistence.updateEntity(METAL_SNAPSHOT_TABLE_NAME, goldSnap),
-                Persistence.updateEntity(METAL_SNAPSHOT_TABLE_NAME, silverSnap)
-            ]);
+            Persistence.transactional(async() => {
+                if (goldSnap) {
+                    await Persistence.updateEntity(METAL_SNAPSHOT_TABLE_NAME, goldSnap);
+                }
+                if (silverSnap) {
+                    await Persistence.updateEntity(METAL_SNAPSHOT_TABLE_NAME, silverSnap);
+                }
+            });
         }
 
         const {gold, silver} = spotPrices;
@@ -63,18 +67,28 @@ export class PricesService {
             metal_timestamp: now
         } as MetalSnapshot;
 
-        return Promise.all([
-            Persistence.persistEntity(METAL_SNAPSHOT_TABLE_NAME, goldSnapshot),
-            Persistence.persistEntity(METAL_SNAPSHOT_TABLE_NAME, silverSnapshot)
-        ]);
+        Persistence.transactional(async() => {
+            await Persistence.persistEntity(METAL_SNAPSHOT_TABLE_NAME, goldSnapshot);
+            await Persistence.persistEntity(METAL_SNAPSHOT_TABLE_NAME, silverSnapshot);
+        });
     }
 
     private static async getMockSpotPrices(): Promise<RealTimeMetalsApiResponse> {
-        const today = DateTimeHelper.getCurrentEasternDateString();
-        const snapshots = await Persistence.selectEntitiesByNamedQuery<MetalSnapshot>(
+        let date = DateTimeHelper.getCurrentEasternDateString();
+        let snapshots = await Persistence.selectEntitiesByNamedQuery<MetalSnapshot>(
             MetalSnapshotQueries.QUERY_BY_SINGLE_DATE,
-            [today]
+            [date]
         );
+
+        let attempts = -1
+        while (snapshots.length === 0) {
+            date = DateTimeHelper.getEasternDateStringWithOffset(attempts);
+            snapshots = await Persistence.selectEntitiesByNamedQuery<MetalSnapshot>(
+                MetalSnapshotQueries.QUERY_BY_SINGLE_DATE,
+                [date]
+            );
+            attempts--;
+        }
 
         const goldSnapshot = snapshots.find(snap => snap.type === PositionTypes.GOLD);
         const silverSnapshot = snapshots.find(snap => snap.type === PositionTypes.SILVER);
@@ -83,8 +97,8 @@ export class PricesService {
         const silverPrice = silverSnapshot?.price ?? 0;
 
         const randomizePrice = (basePrice: number): number => {
-            const isLower = Math.random() < 0.65;
-            const variance = Math.random() * 0.05;
+            const isLower = Math.random() < 0.45;
+            const variance = Math.random() * 0.01;
             return isLower ? basePrice * (1 - variance) : basePrice * (1 + variance);
         };
 
