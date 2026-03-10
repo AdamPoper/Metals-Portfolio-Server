@@ -51,6 +51,7 @@ export class PricesService {
                     await Persistence.updateEntity(METAL_SNAPSHOT_TABLE_NAME, silverSnap);
                 }
             });
+            return;
         }
 
         const {gold, silver} = spotPrices;
